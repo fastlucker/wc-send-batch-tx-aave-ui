@@ -12,9 +12,11 @@ import {
 } from '../../helpers/config/markets-and-network-config';
 import { useUserWalletDataContext } from '../../libs/web3-data-provider';
 import { useProtocolDataContext } from '../../libs/protocol-data-provider';
+import useIsAmbireWC from '../../libs/ambire-wc/useIsAmbireWC';
 import {
   EthTransactionData,
   sendEthTransaction,
+  sendEthBatchTransaction,
   TxStatusType,
 } from '../../helpers/send-ethereum-tx';
 import { ATokenInfo } from '../../helpers/get-atoken-info';
@@ -142,12 +144,15 @@ export default function TxConfirmationView({
   }
 
   const [customGasPrice, setCustomGasPrice] = useState<string | null>(null);
+  const isAmbireWC = useIsAmbireWC();
   // todo: do types more sophisticated
-  const approveTxData = uncheckedApproveTxData.unsignedData
-    ? (uncheckedApproveTxData as EthTransactionData & {
-        unsignedData: EthTransactionData;
-      })
-    : undefined;
+  const approveTxData =
+    uncheckedApproveTxData.unsignedData && !isAmbireWC
+      ? (uncheckedApproveTxData as EthTransactionData & {
+          unsignedData: EthTransactionData;
+        })
+      : undefined;
+
   const actionTxData = uncheckedActionTxData.unsignedData
     ? (uncheckedActionTxData as EthTransactionData & {
         unsignedData: EthTransactionData;
@@ -157,6 +162,7 @@ export default function TxConfirmationView({
   const handleGetTxData = async () => {
     try {
       const txs = await getTransactionsData();
+
       const approvalTx = txs.find((tx) => tx.txType === 'ERC20_APPROVAL');
       const actionTx = txs.find((tx) =>
         [
@@ -310,16 +316,29 @@ export default function TxConfirmationView({
                     onSubmitTransaction={async () => {
                       const success = await handleGetTxData();
                       if (success) {
-                        return sendEthTransaction(
-                          actionTxData.unsignedData,
-                          provider,
-                          setActionTxData,
-                          customGasPrice,
-                          {
-                            onExecution: onMainTxExecuted,
-                            onConfirmation: onMainTxConfirmed,
-                          }
-                        );
+                        if (uncheckedApproveTxData.unsignedData && isAmbireWC) {
+                          return sendEthBatchTransaction(
+                            [uncheckedApproveTxData.unsignedData, actionTxData.unsignedData],
+                            provider,
+                            setActionTxData,
+                            customGasPrice,
+                            {
+                              onExecution: onMainTxExecuted,
+                              onConfirmation: onMainTxConfirmed,
+                            }
+                          );
+                        } else {
+                          return sendEthTransaction(
+                            actionTxData.unsignedData,
+                            provider,
+                            setActionTxData,
+                            customGasPrice,
+                            {
+                              onExecution: onMainTxExecuted,
+                              onConfirmation: onMainTxConfirmed,
+                            }
+                          );
+                        }
                       } else {
                         setActionTxData((state) => ({
                           ...state,
