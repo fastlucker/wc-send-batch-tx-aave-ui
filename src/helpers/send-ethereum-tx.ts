@@ -29,7 +29,6 @@ export interface EthTransactionData {
   txHash?: string;
   txReceipt?: TransactionReceipt;
   error?: string;
-  rawTx?: {};
 }
 
 export interface SendEthTransactionCallbacks {
@@ -184,13 +183,6 @@ export async function sendEthBatchTransaction(
       return;
     }
   }
-
-  /*params.push({
-    to: params[0].to,
-    data: params[0].data,
-  });
-
-  params[params.length - 1].data = params[params.length - 1].data.substr(0, params[params.length - 1].data.length - 64) + '0000000000000000000000000000000000000000000000000000000000000000';*/
 
   const wcProvider = provider.provider as WalletConnectProvider;
 
